@@ -1,22 +1,15 @@
 from flask import Flask, render_template
 from flask_ask_098 import Ask, statement, question, session
-import json
 import requests
+import json
 
 app = Flask(__name__)
-ask = Ask(app, "/pokedexa")
+ask = Ask(app, "/pokedex")
 
-
-# if the move or name is more than one word, this returns the move with a dash in between the two letters
-# this is the format that the json reads
-def name_split(Move):
-    if len(Move.split(" ")) > 1:
-        Move = Move.split(" ")
-        move = Move[0] + "-" + Move[1]
-    else:
-        move = Move
-
-    return move
+g_move = None
+g_poke = None
+g_type = None
+g_skill = None
 
 
 # This takes all of the types of a pokemon and finds the effectiveness/weakness to and from each pokemon
@@ -184,17 +177,16 @@ class Poke_move:
             return self.name + " can't learn " + self.print_name + " in this game."
 
 
-# When the link is opened in a browser, this message appears.
-@app.route('/')
-def homepage():
-    return "Welcome to Michael's pokedex skill. This is meant for use with Amazon Alexa, you shouldn't be googling this."
+# if the move or name is more than one word, this returns the move with a dash in between the two letters
+# this is the format that the json reads
+def name_split(Move):
+    if len(Move.split(" ")) > 1:
+        Move = Move.split(" ")
+        move = Move[0] + "-" + Move[1]
+    else:
+        move = Move
 
-
-@ask.launch
-def start_skill():
-    welcome_message = "Hello, welcome to Michael's pokedex skill"
-    return question(welcome_message)
-    # returning a questions allows for a continuation of the skill session.
+    return move
 
 
 # This is a outer-class skill because it can be called often.
@@ -212,20 +204,23 @@ def get_type(name):
         return type_array[0]
 
 
-@ask.intent("TestIntent", convert={'Pokemona': str})
-def test(Pokemona):
-    if not Pokemona:
-        return question("yup this works")
-    return question("Here is " + Pokemona)
+# When the link is opened in a browser, this message appears.
+@app.route('/')
+def homepage():
+    return "Welcome to Michael's pokedex skill. This is meant for use with Amazon Alexa, you shouldn't be googling this."
 
 
+@ask.launch
+def start_skill():
+    welcome_message = "Hello, welcome to Michael's pokedex skill"
+    return question(welcome_message)
 
 
-@ask.intent("TypeInt", convert={'Pokemon': str})
-def poke_type(Pokemon):
+@ask.intent("TypeIntent", convert={'Pokemon': str})
+def TypeIntent(Pokemon):
     poke = get_type(Pokemon)
-    headline_msg = Pokemon + "'s type is {}".format(poke)
-    return question(headline_msg)
+
+    return question(Pokemon + "'s type is {}".format(poke))
 
 
 @ask.intent("IDIntent", convert={'Pokemon': str})
@@ -247,10 +242,15 @@ def boolean_move(Pokemon, Move):
     return question(a.moves_learned())
 
 
-g_move = None
-g_poke = None
-g_type = None
-g_skill = None
+@ask.intent("Howlearnmoveintent", convert={'Pokemon': str, 'Move': str})
+def how_move(Pokemon, Move):
+    global g_poke, g_move, g_skill
+
+    g_skill = "how_learn()"
+    g_poke = Pokemon
+    g_move = name_split(Move)
+
+    return question("Which game are you playing?")
 
 
 @ask.intent("DescriptionIntent", convert={'Pokemon': str, "Generation": str})
@@ -271,17 +271,6 @@ def pokemon_description(Pokemon, Generation):
             x = a["flavor_text"].replace("\\n", " ")
 
     return question(x)
-
-
-@ask.intent("Howlearnmoveintent", convert={'Pokemon': str, 'Move': str})
-def how_move(Pokemon, Move):
-    global g_poke, g_move, g_skill
-
-    g_skill = "how_learn()"
-    g_poke = Pokemon
-    g_move = name_split(Move)
-
-    return question("Which game are you playing?")
 
 
 # As of now, there are two instances to where a generation is needed to specify a skill
@@ -311,166 +300,4 @@ def game_version(Generation):
         return question(a.how_learn())
 
 
-@ask.intent("SuperEffectiveFrom", convert={'Pokemon': str, 'Type': str})
-def SuperEffectiveFrom(Type, Pokemon):
-    a = PokemonType(Type, Pokemon)
-    array = a.double_damage_from
-    array1 = a.quad_damage_from
-    string = ""
-    string1 = ""
 
-    for a in array1:
-        if len(array1) > 1 and a == array1[-1]:
-            string1 += "and " + a
-        else:
-            string1 += a + " "
-
-    for a in array:
-        if len(array) > 1 and a == array[-1]:
-            string += "and " + a + " "
-        else:
-            string += a + ", "
-
-    # is lengthy for spoken language purposes from Alexa, she can't be speaking in array
-    if len(array1) > 1 and len(array) > 1:
-        return question(
-            string + "are super effective against " + Type if not Pokemon else Pokemon + " and" + string1 + "are quadruple effective "
-                                                                                                            "against " + Type if not Pokemon else Pokemon)
-    elif len(array1) > 1:
-        return question(
-            string + "is super effective against " + Type if not Pokemon else Pokemon + " and" + string1 + "are quadruple effective "
-                                                                                                           "against " + Type if not Pokemon else Pokemon)
-    elif len(array) > 1:
-        return question(
-            string + "are super effective against " + Type if not Pokemon else Pokemon + " and" + string1 + "is quadruple effective "
-                                                                                                            "against " + Type if not Pokemon else Pokemon)
-    else:
-        return question(
-            string + "is super effective against " + Type if not Pokemon else Pokemon + " and" + string1 + "is quadruple effective "
-                                                                                                           "against " + Type if not Pokemon else Pokemon)
-
-
-@ask.intent("SuperEffectiveTo", convert={'Pokemon': str, 'Type': str})
-def SuperEffectiveTo(Type, Pokemon):
-    array = PokemonType(Type, Pokemon).double_damage_to
-    array1 = PokemonType(Type, Pokemon).quad_damage_to
-    string = ""
-    string1 = ""
-
-    for a in array:
-        if len(array) > 1 and a == array[-1]:
-            string += "and " + a
-        else:
-            string += a + " "
-
-    for a in array1:
-        if len(array1) > 1 and a == array1[-1]:
-            string1 += "and " + a
-        else:
-            string1 += a + " "
-
-    return question(Type + " is super effective against " + string + "and quadruple effective against " + string1)
-
-
-@ask.intent("NotVeryEffectiveTo", convert={'Pokemon': str, 'Type': str})
-def NotVeryEffectiveTo(Type, Pokemon):
-    array = PokemonType(Type, Pokemon).half_damage_to
-    array1 = PokemonType(Type, Pokemon).quarter_damage_to
-    string = ""
-    string1 = ""
-
-    for a in array:
-        if len(array) > 1 and a == array[-1]:
-            string += "and " + a
-        else:
-            string += a + " "
-
-    for a in array1:
-        if len(array1) > 1 and a == array1[-1]:
-            string1 += "and " + a
-        else:
-            string1 += a + " "
-
-    return question(Type + "is not very effective against " + string + "and quarter effective against " + string1)
-
-
-@ask.intent("NotVeryEffectiveFrom", convert={'Pokemon': str, 'Type': str})
-def NotVeryEffectiveFrom(Type, Pokemon):
-    array = PokemonType(Type, Pokemon).half_damage_from
-    array1 = PokemonType(Type, Pokemon).quarter_damage_from
-    string = ""
-    string1 = ""
-
-    for a in array1:
-        if len(array1) > 1 and a == array1[-1]:
-            string1 += "and " + a
-        else:
-            string1 += a + " "
-
-    for a in array:
-        if len(array) > 1 and a == array[-1]:
-            string += "and " + a
-        else:
-            string += a + " "
-
-    if len(array1) > 1 and len(array) > 1:
-        return question(string + "are not very effective against " + Type + " and" + string1 + "are quarter effective "
-                                                                                               "against " + Type)
-    elif len(array1) > 1:
-        return question(string + "is not very effective against " + Type + " and" + string1 + "are quarter effective "
-                                                                                              "against " + Type)
-    elif len(array) > 1:
-        return question(string + "are not very effective against " + Type + " and" + string1 + "is quarter effective "
-                                                                                               "against " + Type)
-    else:
-        return question(string + "is not very effective against " + Type + " and" + string1 + "is quarter effective "
-                                                                                              "against " + Type)
-
-
-@ask.intent("NoEffectOn", convert={'Pokemon': str, 'Type': str})
-def NoEffectOn(Type, Pokemon):
-    array = PokemonType(Type, Pokemon).no_damage_to
-
-    string = ""
-
-    for a in array:
-        if len(array) > 1 and a == array[-1]:
-            string += "and " + a
-        else:
-            string += a + " "
-
-    if len(array) > 1:
-        return question(string + "have no effect on " + Type)
-    else:
-        return question(string + "has no effect on " + Type)
-
-
-@ask.intent("NoEffectFrom", convert={'Pokemon': str, 'Type': str})
-def NoEffectFrom(Type, Pokemon):
-    array = PokemonType(Type, Pokemon).no_damage_from
-
-    string = ""
-
-    for a in array:
-        if len(array) > 1 and a == array[-1]:
-            string += "and " + a
-        else:
-            string += a + " "
-
-    return question(Type + "has no effect on " + string)
-
-
-@ask.intent("NoIntent")
-def no_intent():
-    bye_text = 'I am not sure why you asked me to run then, but okay... bye'
-    return statement(bye_text)
-
-
-@ask.intent("HelpIntent")
-def help_intent():
-    help_text = "You can ask me how a pokemon learns a move, its type effectiveness, or it's evolution process."
-    return question(help_text)
-
-
-if __name__ == '__main__':
-    app.run(debug=True)
