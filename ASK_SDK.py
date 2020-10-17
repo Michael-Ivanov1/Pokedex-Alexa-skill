@@ -15,6 +15,7 @@ import pokedex as px
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
 
+# These are the global variables which allow me to reprompt the user and store information from the first skill request.
 g_skill = None
 g_poke = None
 g_move = None
@@ -163,7 +164,7 @@ class HowLearnMoveIntentHandler(AbstractRequestHandler):
                 .response
         )
 
-
+# based on whether the previous skill was the description intent or howlearnmove intent, this will return a different response based on the game being played.
 class RepromptIntentHandler(AbstractRequestHandler):
 
     def can_handle(self, handler_input):
@@ -284,6 +285,8 @@ class CatchAllExceptionHandler(AbstractExceptionHandler):
         )
 
 
+# Lo and behold the function I am the most proud of creating
+# This was when I realized that all that Alexa was sending was purely JSON data and I could navigate it because I knew what it meant.
 def get_spoken_value(request, slot_name):
     if request.intent.slots[slot_name].slotValue["type"] == "List":
         return request.intent.slots[slot_name].slotValue["values"][0]["value"] + " " + \
@@ -292,6 +295,7 @@ def get_spoken_value(request, slot_name):
         return request.intent.slots[slot_name].value
 
 
+# This is how the ASK SDK library works - with initializing a skill builder object and then adding a request handler of each object in order to give each function the ability to be called at once.
 sb = SkillBuilder()
 
 sb.add_request_handler(LaunchRequestHandler())
@@ -311,10 +315,3 @@ sb.add_request_handler(SessionEndedRequestHandler())
 sb.add_exception_handler(CatchAllExceptionHandler())
 
 lambda_handler = sb.lambda_handler()
-
-
-
-
-
-
-
