@@ -1,6 +1,97 @@
 import requests
 
 
+# This takes all of the types of a pokemon and finds the effectiveness/weakness to and from each pokemon
+class PokemonType:
+
+    def __init__(self, type, name):
+        self.double_damage_from, self.double_damage_to, self.half_damage_to, self.half_damage_from = [], [], [], []
+        self.no_damage_from, self.no_damage_to = [], []
+        self.quad_damage_to, self.quad_damage_from, self.quarter_damage_to, self.quarter_damage_from = [], [], [], []
+
+        self.name = name
+        self.types = self.self_get_type() if not type else type
+        self.damage_to()
+        self.damage_from()
+
+    def self_get_type(self):
+
+        poke = requests.get("https://pokeapi.co/api/v2/pokemon/" + self.name)
+        type_array = []
+        for x in range(len(poke.json()["types"])):
+            type_array.append(poke.json()["types"][x]["type"]["name"])
+
+        return type_array
+
+    def damage_to(self):
+
+        for t in self.types:
+            if len(self.types) != 2:
+                t = self.types
+            d = requests.get("https://pokeapi.co/api/v2/type/" + t)
+            d = d.json()["damage_relations"]
+
+            for x in d["double_damage_to"]:
+                if [x][0]["name"] in set(self.double_damage_to):
+                    self.double_damage_to.remove([x][0]["name"])
+                    self.quad_damage_to.append([x][0]["name"])
+                elif [x][0]["name"] in set(self.double_damage_from):
+                    self.double_damage_from.remove([x][0]["name"])
+                else:
+                    self.double_damage_to.append([x][0]["name"])
+
+            for x in d["half_damage_to"]:
+                if [x][0]["name"] in set(self.half_damage_to):
+                    self.half_damage_to.remove([x][0]["name"])
+                    self.quarter_damage_to.append([x][0]["name"])
+                elif [x][0]["name"] in set(self.double_damage_to):
+                    self.double_damage_to.remove([x][0]["name"])
+                else:
+                    self.half_damage_to.append([x][0]["name"])
+
+            for x in d["no_damage_to"]:
+                if [x][0]["name"] in set(self.half_damage_to):
+                    self.half_damage_to.remove([x][0]["name"])
+                if [x][0]["name"] in set(self.double_damage_to):
+                    self.double_damage_from.remove([x][0]["name"])
+                self.no_damage_to.append([x][0]["name"])
+            if len(self.types) != 2:
+                break
+
+    def damage_from(self):
+
+        for t in self.types:
+            if len(self.types) != 2:
+                t = self.types
+            d = requests.get("https://pokeapi.co/api/v2/type/" + t)
+            d = d.json()["damage_relations"]
+
+            for x in d["double_damage_from"]:
+                if [x][0]["name"] in set(self.double_damage_from):
+                    self.double_damage_from.remove([x][0]["name"])
+                    self.quad_damage_from.append([x][0]["name"])
+                elif [x][0]["name"] in set(self.half_damage_from):
+                    self.half_damage_from.remove([x][0]["name"])
+                else:
+                    self.double_damage_from.append([x][0]["name"])
+
+            for x in d["half_damage_from"]:
+                if [x][0]["name"] in set(self.half_damage_from):
+                    self.half_damage_from.remove([x][0]["name"])
+                    self.quarter_damage_from.append([x][0]["name"])
+                elif [x][0]["name"] in set(self.double_damage_from):
+                    self.double_damage_from.remove([x][0]["name"])
+                else:
+                    self.half_damage_from.append([x][0]["name"])
+
+            for x in d["no_damage_from"]:
+                if [x][0]["name"] in set(self.half_damage_from):
+                    self.half_damage_from.remove([x][0]["name"])
+                if [x][0]["name"] in set(self.double_damage_from):
+                    self.double_damage_from.remove([x][0]["name"])
+                self.no_damage_from.append([x][0]["name"])
+            if len(self.types) != 2:
+                break
 
 
 # def get_type():
